@@ -1,12 +1,9 @@
-##### FIRST
 from google.colab import drive
 drive.mount ("/content/gdrive")
-##### SECOND
-# prompt answer
+
 !pip install numpy==1.12.1
 !pip install tensorflow==1.13.1
-##### THIRD
-# Imports
+
 import os
 import re
 import copy
@@ -22,8 +19,7 @@ from scipy import signal
 import matplotlib.pyplot as plt
 from scipy.io.wavfile import write
 from __future__ import print_function, division
-##### FOURTH
-### hyperparams.py
+
 class Hyperparams:
   prepro = False
   vocab = "PE абвгдеёжзийклмнопрстуфхцчшщъыьэюяәіңғүұқөһ'.?"
@@ -61,8 +57,7 @@ class Hyperparams:
 ##### FIFTH
 # from hyperparams import Hyperparams as hp
 hp = Hyperparams ()
-##### SIXTH
-### utils.py
+
 def get_spectrograms (fpath):
   # num = np.random.randn ()
   # if num < 0.2:
@@ -140,8 +135,7 @@ def load_spectrograms (fpath):
   mel = np.pad (mel, [[0, num_paddings], [0, 0]], mode = "constant")
   mag = np.pad (mag, [[0, num_paddings], [0, 0]], mode = "constant")
   return fname, mel.reshape ((-1, hp.n_mels * hp.r)), mag
-##### SEVENTH
-### data_load.py
+
 def load_vocab ():
   char2idx = {char: idx for idx, char in enumerate (hp.vocab)}
   idx2char = {idx: char for idx, char in enumerate (hp.vocab)}
@@ -160,14 +154,13 @@ def load_data(mode="train"):
   char2idx, idx2char = load_vocab()
 
   if mode in ("train", "eval"):
-    # Parse
     fpaths, text_lengths, texts = [], [], []
     transcript = os.path.join(hp.data, 'transcript.txt')
     lines = codecs.open(transcript, 'r', 'utf-8').readlines()
     total_hours = 0
     if mode=="train":
       lines = lines[1:]
-    else: # We attack only one sample!
+    else:
       lines = lines[:1]
 
     for line in lines:
@@ -188,7 +181,6 @@ def load_data(mode="train"):
 
     return fpaths, text_lengths, texts
   else:
-    # Parse
     lines = codecs.open(hp.test_data, 'r', 'utf-8').readlines()[1:]
     sents = [text_normalize(line.split(" ", 1)[-1]).strip() + "E" for line in lines] # text normalization, E: EOS
     lengths = [len(sent) for sent in sents]
@@ -215,7 +207,6 @@ def get_batch():
     fpath, text_length, text = tf.train.slice_input_producer([fpaths, text_lengths, texts], shuffle=True)
   # fpath, text_length, text = tf.data.Dataset.from_tensor_slices([fpaths, text_lengths, texts])
 
-    # Parse
     text = tf.decode_raw(text, tf.int32)  # (None,)
 
     if hp.prepro:
@@ -237,8 +228,7 @@ def get_batch():
     _, (texts, mels, mags, fnames) = tf.contrib.training.bucket_by_sequence_length(input_length=text_length, tensors=[text, mel, mag, fname], batch_size=hp.batch_size, bucket_boundaries=[i for i in range(minlen + 1, maxlen - 1, 20)], num_threads=16, capacity=hp.batch_size * 4, dynamic_pad=True)
 
   return texts, mels, mags, fnames, num_batch
-##### EIGHTH
-### modules.py
+
 def embed(inputs, vocab_size, num_units, zero_pad=True, scope="embedding", reuse=None):
   with tf.variable_scope(scope, reuse=reuse):
     lookup_table = tf.get_variable('lookup_table', dtype=tf.float32, shape=[vocab_size, num_units], initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.01))
@@ -250,9 +240,7 @@ def bn(inputs, is_training=True, activation_fn=None, scope="bn", reuse=None):
   inputs_shape = inputs.get_shape()
   inputs_rank = inputs_shape.ndims
 
-  # use fused batch norm if inputs_rank in [2, 3, 4] as it is much faster.
-  # pay attention to the fact that fused_batch_norm requires shape to be rank 4 of NHWC.
-  if inputs_rank in [2, 3, 4]:
+    if inputs_rank in [2, 3, 4]:
     if inputs_rank == 2:
       inputs = tf.expand_dims(inputs, axis=1)
       inputs = tf.expand_dims(inputs, axis=2)
@@ -345,8 +333,7 @@ def highwaynet(inputs, num_units=None, scope="highwaynet", reuse=None):
     T = tf.layers.dense(inputs, units=num_units, activation=tf.nn.sigmoid, bias_initializer=tf.constant_initializer(-1.0), name="dense2")
     outputs = H*T + inputs*(1.-T)
   return outputs
-##### NINTH
-### networks.py
+
 def encoder(inputs, is_training=True, scope="encoder", reuse=None):
   with tf.variable_scope(scope, reuse=reuse):
     # Encoder pre-net
@@ -428,8 +415,7 @@ def decoder2(inputs, is_training=True, scope="decoder2", reuse=None):
     outputs = tf.layers.dense(dec, 1+hp.n_fft//2)
 
   return outputs
-##### TENTH
-### class Graph from train.py for synthesize.py
+
 class Graph:
   def __init__(self, mode="train"):
     self.char2idx, self.idx2char = load_vocab()
@@ -477,9 +463,7 @@ class Graph:
       tf.summary.audio("{}/sample".format(mode), tf.expand_dims(self.audio, 0), hp.sr)
       self.merged = tf.summary.merge_all()
 !pip show numpy tensorflow
-##### ELEVENTH
-#### Main code
-### code from train.py
+
 if __name__ == '__main__':
   g = Graph(); print("Training Graph loaded")
   # with g.graph.as_default():
@@ -487,8 +471,6 @@ if __name__ == '__main__':
   sv = tf.train.Supervisor(logdir=hp.logdir, save_summaries_secs=60, save_model_secs=0)
 # print("Before \"with\"")
   with sv.managed_session() as sess:
-  # print("\n\tIn \"with\"")
-  # while 1: # УБРААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААААл это
   # while iteration_counter < 1:
       for _ in tqdm(range(g.num_batch), total=g.num_batch, ncols=70, leave=False, unit='b'):
         print("\n\t\tIn for _")
@@ -507,5 +489,4 @@ if __name__ == '__main__':
         # print("\n\t\t\tAfter sess.run")
           plot_alignment(al[0], gs)
         # print("\n\t\t\tAfter plot_alignment")
-    # iteration_counter += 1
   print("Training done")
